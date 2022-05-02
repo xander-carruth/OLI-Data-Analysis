@@ -16,7 +16,7 @@ def oli_data(dataset):
     '''
     Load OLI data from excel file (cached h5f files used to speed up)
     Args:
-        dataset (str): short name for dataset ('full' or 'stoich')
+        dataset (str): short name for dataset ('full')
 
     Raises:
         ValueError: if dataset doesn't match an allowed type

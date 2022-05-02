@@ -1,3 +1,7 @@
+"""
+@author: Alexander Carruth
+"""
+
 import os
 import numpy as np
 import math
@@ -9,7 +13,7 @@ def oli_dem_data(dataset):
     '''
     Load OLI demographic data from excel file (cached h5f files used to speed up)
     Args:
-        dataset (str): short name for dataset ('full' or 'stoich')
+        dataset (str): short name for dataset ('dem')
 
     Raises:
         ValueError: if dataset doesn't match an allowed type
@@ -23,7 +27,6 @@ def oli_dem_data(dataset):
     
     if dataset not in excel_files:
         raise ValueError(str(dataset)+' not an allowed value to load_data()')
-    #dataset = 'full'
     data_location = os.path.join('datasets')
     
     #Add folder to datapath
@@ -58,7 +61,7 @@ def oli_quest_data(dataset):
     '''
     Load OLI question data from excel file (cached h5f files used to speed up)
     Args:
-        dataset (str): short name for dataset ('full' or 'stoich')
+        dataset (str): short name for dataset ('quest')
 
     Raises:
         ValueError: if dataset doesn't match an allowed type
@@ -72,7 +75,6 @@ def oli_quest_data(dataset):
     
     if dataset not in excel_files:
         raise ValueError(str(dataset)+' not an allowed value to load_data()')
-    #dataset = 'full'
     data_location = os.path.join('datasets')
     
     #Add folder to datapath
@@ -134,13 +136,9 @@ for stud in dg_df['stud'].unique():
     if(not (stud in min_stud)):
         maj_stud = np.append(maj_stud, stud)
         
-#%%
-#Take in dataset
-# Filter for problems with quiz in name
-# Take unique names, filter for each quiz in list for minority vs majority
-# Calculate grade for each quiz for each group, append grade to list
-
-#Ask question about pooled quiz vs regular quiz
+#%% Print the number of students in each minority category
+print("Number of minority students: "+str(len(min_stud)))
+print("Number of non-minority students: "+str(len(maj_stud)))
 
 #%% Get questions dataset
 oli_qdf = oli_quest_data('quest')
@@ -161,7 +159,10 @@ for name in pnames_quiz:
     temp_minq = minq_df[minq_df['pname']==name]
     corrects = temp_minq['corrects'].sum()
     total = corrects + temp_minq['incorrects'].sum()
-    tot_score = corrects/total * 100
+    if(total != 0):
+        tot_score = corrects/total * 100
+    else:
+        tot_score = math.nan
     min_score.append(tot_score)
 
 # Get scores on quiz pools for the non minorities
@@ -169,11 +170,14 @@ for name in pnames_quiz:
     temp_majq = majq_df[majq_df['pname']==name]
     corrects = temp_majq['corrects'].sum()
     total = corrects + temp_majq['incorrects'].sum()
-    tot_score = (corrects/total) * 100
+    if(total != 0):
+        tot_score = (corrects/total) * 100
+    else:
+        tot_score = math.nan
     maj_score.append(tot_score)
 
 #%% Plot the average quiz grades for the minority groups
-x_coord = [i for i in range(len(min_score))]
+x_coord = [i+1 for i in range(len(min_score))]
 plt.plot(x_coord, min_score, '.r', label='Minority')
 plt.plot(x_coord, maj_score, '.b', label='Non-Minority')
 plt.ylabel('Grade (%)')
@@ -199,6 +203,10 @@ for stud in dg_df['stud'].unique():
     if(not (stud in fir_stud)):
         nonfir_stud = np.append(nonfir_stud, stud)
 
+#%% Print the number of students in each first gen category
+print("Number of first generation students: "+str(len(fir_stud)))
+print("Number of non-minority students: "+str(len(nonfir_stud)))
+
 #%% Calculate scores on each quiz for the first gen and non first gen groups
 # Get names for the quiz pools
 pnames_quiz = set([x for x in oli_qdf['pname'] if x.count('quiz')])
@@ -215,7 +223,10 @@ for name in pnames_quiz:
     temp_firq = firq_df[firq_df['pname']==name]
     corrects = temp_firq['corrects'].sum()
     total = corrects + temp_firq['incorrects'].sum()
-    tot_score = corrects/total * 100
+    if(total != 0):
+        tot_score = corrects/total * 100
+    else:
+        tot_score = math.nan
     fir_score.append(tot_score)
 
 # Get the scores for non first gen college students
@@ -223,11 +234,14 @@ for name in pnames_quiz:
     temp_nonfirq = nonfirq_df[nonfirq_df['pname']==name]
     corrects = temp_nonfirq['corrects'].sum()
     total = corrects + temp_nonfirq['incorrects'].sum()
-    tot_score = (corrects/total) * 100
+    if(total != 0):
+        tot_score = (corrects/total) * 100
+    else:
+        tot_score = math.nan
     nonfir_score.append(tot_score)
 
 #%% Plot the average quiz grades for the first gen groups
-x_coord = [i for i in range(len(fir_score))]
+x_coord = [i+1 for i in range(len(fir_score))]
 plt.plot(x_coord, fir_score, '.r', label='First Gen')
 plt.plot(x_coord, nonfir_score, '.b', label='Non First Gen')
 plt.ylabel('Grade (%)')

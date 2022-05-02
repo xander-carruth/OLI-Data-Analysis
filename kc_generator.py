@@ -1,29 +1,7 @@
-# -*- coding: utf-8 -*-
 """
-Created on Tue Apr  5 16:59:13 2022
-
-@author: acarr
+@author: Alexander Carruth
 """
 
-'''
-Steps for Knowledge Curve:
-    Generate list of important features for comparing Prereq/Coreq and Scaffolded!
-    Figure out how to check observation count!
-    Figure out how to get error rate for each observation count
-    Generate knowledge curve for one knowledge concept
-    Create GUI that displays observation count for knowledge concept
-    Create GUI that allows user to select knowledge concepts displayed on a graph
-    Allow user to choose number of observations
-    Create GUI for user to see correlation between two knowledge concepts
-'''
-'''
-Import data correctly
-Create dataframe of kc, observation count, and correct or incorrect for the observation
-    Create the right name mapping
-    Split the rows with ~~ into separate rows with their respective observation count
-
-'''
-#%%
 import os
 import numpy as np
 import math
@@ -35,7 +13,7 @@ def oli_kc_data(dataset):
     '''
     Load OLI data from excel file (cached h5f files used to speed up)
     Args:
-        dataset (str): short name for dataset ('full' or 'stoich')
+        dataset (str): short name for dataset ('full')
 
     Raises:
         ValueError: if dataset doesn't match an allowed type
@@ -45,12 +23,10 @@ def oli_kc_data(dataset):
                    forms, and some columns removed (see source) 
 
     '''
-    excel_files = {'full': 'ds_4594_chem1_combined.xlsx',
-                   'stoich': 'chem1_data_stoich_only_ds4594.xlsx'}
+    excel_files = {'full': 'ds5100_student_step_All_Data.xlsx'}
     
     if dataset not in excel_files:
         raise ValueError(str(dataset)+' not an allowed value to load_data()')
-    #dataset = 'full'
     data_location = os.path.join('datasets')
     
     #Add folder to datapath
@@ -72,8 +48,8 @@ def oli_kc_data(dataset):
         'Incorrects': 'incorrects',
         'Hints': 'hints',
         'Corrects': 'corrects',
-        'KC (chemistry_general1-1_9)': 'kc',
-        'Opportunity (chemistry_general1-1_9)': 'opp'
+        'Opportunity (chemistry_general1-4_5)': 'opp',
+        'KC (chemistry_general1-4_5)': 'kc'
         }
     
     # Drop columns that are not in name map and rename columns to be the same
@@ -84,85 +60,74 @@ def oli_kc_data(dataset):
     oli = oli.dropna()
     
     return oli
-#%%
+#%% Load in the data
 oli_df = oli_kc_data('full')
-#%%
-#print(oli_df['kc'])
-# chedck = oli_df['kc']
-# for col, kc in oli_df['kc'].items():
-#     print(kc)
-
+#%% Create dataframe where rows only map to one knowledge concept
 kc_rm = []
+# Sort out which questions have multiple kcs
 for col,kc in oli_df['kc'].items():
     if('~~' in kc):
         kc_rm.append(kc)
+# Create separate dataframes for one with multiple kcs and one with single kcs
 oli_rm = oli_df[oli_df['kc'].isin(kc_rm)]
 oli_app = oli_df[~oli_df['kc'].isin(kc_rm)]
+# Split up the kcs and their respective observations into arrays
 oli_rm['kc'] = oli_rm['kc'].str.split("~~")
 oli_rm['opp'] = oli_rm['opp'].str.split("~~")
+# Convert the arrays to single rows and match the rows for kc to their opportunity
 oli_rm = oli_rm.explode(list(('kc','opp')))
+# Add the removed kcs back in
 oli_kc = oli_app.append(oli_rm)
+
+# Get the unique kcs
 kc_uni = oli_kc['kc'].unique()
-
-# # Checking for Did I Get This problems
-# pnames_digt = set([x for x in oli_kc['pname'] if x.count('digt') and not x.count('pool')])
-# # Checking for Quiz problems
-# pnames_quiz = set([x for x in oli_kc['pname'] if x.count('quiz') and not x.count('pool')])
-# pnames_keep = pnames_digt.copy()
-# pnames_keep.update(pnames_quiz)
-
-# oli_kc = oli_kc[oli_kc['pname'].isin(pnames_keep)]
-
-
 oli_kc = oli_kc[oli_kc['kc'].isin(kc_uni)]
+# Convert opportunities from strings to numbers
 oli_kc['opp'] = pd.to_numeric(oli_kc['opp'])
+# Sort the dataframe by opportunities in ascending order
 oli_kc = oli_kc.sort_values('opp', axis=0)
 
-# for kc in kc_uni:
-#     df1 = oli_kc[oli_kc['kc'] == kc]
-#     for 
-# Sum up corrects and incorrects for knowledge concept at certain observation
-
 #%% Generate knowledge curve DataFrame for all knowledge curves
-#stu_uni = oli_kc['stud'].dropna().unique()
+# Drop nans and get the opportunity counts
 opp_list = oli_kc['opp'].dropna().unique()
 def generate_kc_curve(kc):
     kc_curve = pd.DataFrame()
+    # Get dataframe for the current kc
     df1 = oli_kc[oli_kc['kc'] == kc]
     for opp in opp_list:
+        # Get dataframe for the current opportunity
         df2 = df1[df1['opp'] == opp]
         # count the total corrects and incorrects and divide incorrect by total
         # save the answer of opportunity number, error rate, and knowledge concept
         incorrects = np.sum(df2['incorrects'])
         total_answers = np.sum(df2['corrects']) + incorrects
-        error_rate = incorrects/total_answers * 100
+        if(total_answers != 0):
+            error_rate = incorrects/total_answers * 100
+        else:
+            error_rate = math.nan
         append_frame = {'kc': kc, 'opp': opp, 'er': error_rate}
         kc_curve = kc_curve.append(append_frame, ignore_index = True)
     return kc_curve
 
-kc_all_curve = pd.DataFrame()
+kc_all_curve = []
+# Create list of knowledge curves for every knowledge concept
 for kc in kc_uni:
     kc_all_curve.append(generate_kc_curve(kc))
-#%% Average the error rate for all observations in kc_all_curve
-df_er_sum = pd.DataFrame()
-for opp in kc_all_curve['opp']:
-    df2 = kc_all_curve[kc_all_curve['opp']==opp]
-    er_mean = np.mean(kc_all_curve['er'])
-    append_frame = {'opp': opp, 'erm': er_mean}
-    df_er_sum.append(append_frame, ignore_index = True)
 
-#%% Plot knowledge curve for kc_all_curve
+#%% Plot knowledge curve for a single kc
 plt.figure(1)
-# kc_first = np.mean(score_first, 1)
-plt.plot(df_er_sum['opp'],df_er_sum['erm'],'r.')
+test = kc_all_curve[0]['er']
+plt.plot(kc_all_curve[0]['opp'],kc_all_curve[0]['er'],'.r-')
 
-#%%
-#Calculate the error rate for all observations in DataFrame
+#%% Generate average error rate per observation over all knowledge curves
+# Sort kc dataframe in ascending order and get list of unique values
 oli_kc = oli_kc.sort_values('opp', axis=0)
 opp_list = oli_kc['opp'].dropna().unique()
 
+# Calculate the error rate for all opportunities in kc dataframe
 df_toter = pd.DataFrame()
 for opp in opp_list:
+    # Get dataframe for the current opportunity
     df1 = oli_kc[oli_kc['opp'] == opp]
     incorrects = np.sum(df1['incorrects'])
     total_answers = np.sum(df1['corrects']) + incorrects
@@ -171,34 +136,12 @@ for opp in opp_list:
     df_toter = df_toter.append(append_frame, ignore_index = True)
 
 
-#%% Plot knowledge curve for kall observations
+#%% Plot knowledge curve for all observations
 plt.figure(1)
-# kc_first = np.mean(score_first, 1)
 plt.plot(df_toter['opp'],df_toter['erm'],'.r-')
 plt.ylabel('Error Rate (%)')
 plt.xlabel('Observation')
 plt.title('Knowledge Curve')
 plt.show()
 
-#%%
 
-'''
-Ask Sandy about rating question difficulty, exporting data from Datashop not as text, and how to tell student demographic as well
-Open echo > select course > go to reseources or look in xml for question names
-Text data can be imported into excel as csv
-Three pre student survey, demographics are in the third survey
-Separate minority vs Asian and white
-Separate first gen and not first gen
-IRT Analysis
-Most current KC models?
-Splitting into demographics, rasch analysis
-Look at the quiz performance by demographic,
-28-38 on spreadsheet would be good for historical comparison
-
-
-Rasch analysis for all questions (student average in course on x axis, score on question on y axis)
-Check pearson correlation code
-Do both digt and quizzes and all question types separately
-Show demographics and their respective scores
-What is predicted on the knowledge curve?
-'''
