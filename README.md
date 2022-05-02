@@ -3,7 +3,7 @@
 The oli_dem_data function runs on data exported as “By Transaction”  
 The oli_quest_data function runs on data exported as “By Student-Step”  
 
-<ins>File List:</ins>
+<ins>File List:</ins>  
 **correlations.py:** Cleaned up version of the file originally sent to me  
 **demographics_generator.py:** Holds the basic code for getting demographic data from the datasheets and gives the example of plotting the averaged quiz grades for minority vs non minority and first gen vs non first gen students  
 **kc_dem_generator.py:** Plots the minority and non minority students knowledge curves for comparison  
